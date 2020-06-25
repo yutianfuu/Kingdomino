@@ -1,0 +1,179 @@
+namespace ca.mcgill.ecse223.kingdomino.model;
+class Gameplay {
+
+    gamestatus {
+        // TODO: complete gameplay state machine
+        Initializing {
+            CreatingFirstDraft {
+                entry/{shuffleDominoPile(); createFirstDraft(); orderNextDraft();}
+                draftReady -> /{revealNextDraft(); generateInitialPlayerOrder();} Initializing.SelectingFirstDomino;
+            }
+            SelectingFirstDomino {
+          // consider the turn??
+            
+            dominoSelected(int id)[!isCurrentPlayerTheLastInTurn()&& validSelection()]-> /{selectDomino(id);setNextPlayer();} Initializing.SelectingFirstDomino;
+            dominoSelected(int id)[isCurrentPlayerTheLastInTurn() && validSelection()] -> /{selectDomino(id);setNextPlayer();} OnNextTurn.CreateNextDraft;
+            
+            // TODO add transitions with triggers, guards, actions, and target states
+            }
+        }
+        OnNextTurn{
+          SelectDomino{
+            dominoSelected(int id)[!isCurrentPlayerTheLastInTurn()&& validSelection()]->/{selectDomino(id);setNextPlayer();}OnNextTurn.PreplaceDomino;
+            dominoSelected(int id)[!validSelection()]->/{}OnNextTurn.PreplaceDomino;
+            dominoSelected(int id)[isCurrentPlayerTheLastInTurn()&&!isCurrentTurnTheLastInGame() && validSelection()]->/{selectDomino(id); setNextPlayer();}OnNextTurn.CreateNextDraft;
+            dominoSelected(int id)[isCurrentPlayerTheLastInTurn()&&isCurrentTurnTheLastInGame() && validSelection()]->/{selectDomino(id);}CalculateResult;
+          }
+        	CreateNextDraft{
+              entry/{createNextDraft();}
+              draftReady -> /{}OnNextTurn.OrderAndReveal;
+        	
+        	}
+          OrderAndReveal{
+            
+            
+            orderReady -> /{orderNextDraft();revealReady();}OnNextTurn.OrderAndReveal;
+            revealReady -> /{revealNextDraft();}OnNextTurn.PreplaceDomino;
+          }
+          PreplaceDomino{
+            moveDominoReq(DirectionKind dir, DominoInKingdom doinkingdom)->/{moveDomino(dir, doinkingdom); } OnNextTurn.PreplaceDomino;
+            rotateDominoReq(DirectionKind dir, DominoInKingdom doinkingdom)->/{rotateDomino(dir, doinkingdom);} OnNextTurn.PreplaceDomino;
+            placeDominoReq(DominoInKingdom doinkingdom)[!isCurrentPlayerTheLastInTurn()&& !isCurrentTurnTheLastInGame()&& isValid(doinkingdom)]->/{placeDomino(doinkingdom);calResult();} OnNextTurn.SelectDomino;
+            placeDominoReq(DominoInKingdom doinkingdom)[isCurrentPlayerTheLastInTurn()&& !isCurrentTurnTheLastInGame() && isValid(doinkingdom)]->/{placeDomino(doinkingdom);calResult();} OnNextTurn.SelectDomino;
+            placeDominoReq(DominoInKingdom doinkingdom)[!isCurrentPlayerTheLastInTurn()&&isCurrentTurnTheLastInGame() && isValid(doinkingdom)]->/{placeDomino(doinkingdom);calResult();setNextPlayer();} OnNextTurn.PreplaceDomino;
+            placeDominoReq(DominoInKingdom doinkingdom)[isCurrentPlayerTheLastInTurn()&&isCurrentTurnTheLastInGame() && isValid(doinkingdom)]->/{placeDomino(doinkingdom);calResult();}CalculateResult;
+            discardDominoReq(DominoInKingdom doinkingdom)[!isCurrentPlayerTheLastInTurn()&&!isCurrentTurnTheLastInGame()&& !isValid(doinkingdom)]->/{discardDomino(doinkingdom);calResult();}OnNextTurn.SelectDomino;
+            discardDominoReq(DominoInKingdom doinkingdom)[isCurrentPlayerTheLastInTurn()&&!isCurrentTurnTheLastInGame()&& !isValid(doinkingdom)]->/{discardDomino(doinkingdom);calResult();draftReady();revealReady();}OnNextTurn.CreateNextDraft;
+            discardDominoReq(DominoInKingdom doinkingdom)[!isCurrentPlayerTheLastInTurn()&&isCurrentTurnTheLastInGame()&& !isValid(doinkingdom)]->/{discardDomino(doinkingdom);calResult();setNextPlayer();}OnNextTurn.PreplaceDomino;
+            discardDominoReq(DominoInKingdom doinkingdom)[isCurrentPlayerTheLastInTurn()&&isCurrentTurnTheLastInGame()&& !isValid(doinkingdom)]->/{discardDomino(doinkingdom);calResult();}CalculateResult;
+            
+          }
+          CalculateResult{
+          entry/{calculateRanking();}
+            calculateResult(Player player)[!isCurrentPlayerTheLastInTurn()]->/{calResult(player); setNextPlayer();}CalculateResult;
+            calculateResult(Player player)[isCurrentPlayerTheLastInTurn()]->/{calResult(player); calculateRanking();}CalculateResult;
+            exit/{printRanking();}
+          }
+          
+          
+        }
+    }
+   
+
+    /*
+     * Setter for test setup
+     */
+
+    public void setGamestatus(String status){
+        switch (status) {
+       	case "CreatingFirstDraft":
+       	    gamestatus = Gamestatus.Initializing;
+       	    gamestatusInitializing = GamestatusInitializing.CreatingFirstDraft;
+       	    break;
+       	case "SelectingFirstDomino":
+       		gamestatus = Gamestatus.Initializing;
+       		gamestatusInitializing = GamestatusInitializing.SelectingFirstDomino;
+       		break;
+       	case "SelectingDomino":
+       		gamestatus = Gamestatus.OnNextTurn;
+       		gamestatusOnNextTurn = GamestatusOnNextTurn.SelectDomino;
+       		break;
+       	case "PlacingDomino":
+       		gamestatus = Gamestatus.OnNextTurn;
+       		gamestatusOnNextTurn = GamestatusOnNextTurn.PreplaceDomino;
+       		break;
+       	case "PlacingLastDomino":
+       		gamestatus = Gamestatus.OnNextTurn;
+       		gamestatusOnNextTurn = GamestatusOnNextTurn.PreplaceDomino;
+       		break;
+       	case "DiscardingDomino":
+       		gamestatus = Gamestatus.OnNextTurn;
+       		gamestatusOnNextTurn = GamestatusOnNextTurn.PreplaceDomino;
+       		break;
+       	case "OrderAndReveal":
+       		gamestatus = Gamestatus.OnNextTurn;
+       		gamestatusOnNextTurn = GamestatusOnNextTurn.OrderAndReveal;
+       		break;
+       	case "CalculateResult":
+       		gamestatus = Gamestatus.OnNextTurn;
+       		gamestatusOnNextTurn = GamestatusOnNextTurn.CalculateResult;
+       		break;
+       	// TODO add further cases here to set desired state
+       	default:
+       	    throw new RuntimeException("Invalid gamestatus string was provided: " + status);
+       	}
+    }
+
+    /*
+     * Guards
+     */
+    
+    public boolean isCurrentPlayerTheLastInTurn() {
+        // TODO: implement this
+        return false;
+    }
+        
+    public boolean isCurrentTurnTheLastInGame() {
+        // TODO: implement this
+        return false;
+    }
+    public boolean validSelection(){
+    return false;
+    }
+    public boolean isValid(DominoInKingdom dominoinkingdom){
+    return false; 
+    }
+    
+    
+    // You may need to add more guards here
+        
+    /*
+     * Actions
+     */
+    
+    public void shuffleDominoPile() {
+        // TODO: implement this
+    }
+    
+    public void generateInitialPlayerOrder() {
+        // TODO: implement this
+    }
+    
+    public void createNextDraft() {
+        // TODO: implement this
+    }
+    
+    public void orderNextDraft() {
+        // TODO: implement this
+    }
+    
+    public void revealNextDraft() {
+        // TODO: implement this
+    }
+    public void createFirstDraft(){
+    }
+    public void selectDomino (int id){
+    }
+    public void setNextPlayer(){
+    }
+    
+    public void moveDomino (DirectionKind dir, DominoInKingdom dominoinkingdom){
+    }
+    public void rotateDomino (DirectionKind dir, DominoInKingdom kingdom){
+    }
+    public void placeDomino (DominoInKingdom dominoinkingdom){
+    }
+    public void discardDomino (DominoInKingdom dominoinkingdom){
+    }
+    public void calResult(Player player){
+    }
+    public void calculateRanking(){
+    }
+    public void printRanking(){
+    }
+    public void secondDraft(){
+    }
+    public void setFirstPlayer(){
+    }
+    // You may need to add more actions here
+}

@@ -1,0 +1,14 @@
+wen 1 3
+amelia 3 4
+amelia 0 1
+wen 0 1
+mary 0 1
+marc 1 1
+amelia 0 2
+wen 0 2
+mary 0 2
+marc 2 2
+a 0 1
+b 0 1
+c 0 1
+d 1 1
